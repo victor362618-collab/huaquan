@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head><meta content="default-src 'none'; style-src * 'unsafe-inline'; script-src * 'unsafe-inline'; img-src * data: blob:; font-src * data:; media-src * data: blob:; connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'" http-equiv="Content-Security-Policy"/>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>24级动画二班团支部画圈挑战</title>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/0915/3.4.17.js"></script>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/cdn.jsdelivr.net/npm/canvas-confetti/1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/js/all.min.js"></script>
+<link href="https://image.uc.cn/s/uae/g/3n/mos-production/fontawesome-free-7.1.0-web/css/fontawesome.min.css" rel="stylesheet"/>
+<style>
+        /* Custom styles for the magnetic board effect */
+        body {
+            background-color: #2c3e50; /* Fallback */
+            overflow: hidden; /* Prevent scrolling */
+            touch-action: none; /* Prevent touch scrolling on mobile */
+        }
+
+        .magnetic-bg {
+            background-color: #334155; /* Slate 700 */
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .reference-line {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ref-h {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            transform: translateY(-50%);
+        }
+
+        .ref-v {
+            left: 50%;
+            top: 0;
+            height: 100%;
+            width: 1px;
+            transform: translateX(-50%);
+        }
+
+        .ref-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Toggle Switch Styling */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+        
+        .fade-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+        .fade-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .fade-exit-active {
+            opacity: 0;
+            transform: scale(0.95);
+            transition: opacity 300ms, transform 300ms;
+        }
+    </style>
+</head>
+<body class="magnetic-bg w-full h-screen text-slate-200 font-sans antialiased">
+<header class="absolute top-0 left-0 w-full p-4 z-20 flex justify-between items-center pointer-events-none">
+<h1 class="text-xl md:text-2xl font-bold tracking-wider text-slate-100 drop-shadow-md pointer-events-auto">
+            24级动画二班团支部画圈挑战
+        </h1>
+<div class="flex items-center gap-3 pointer-events-auto bg-slate-800/50 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-600/50">
+<span class="text-sm font-medium text-slate-300">参考线</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-300 left-0 top-0 border-slate-400" id="ref-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-600 cursor-pointer transition-colors duration-300" for="ref-toggle"></label>
+</div>
+</div>
+</header>
+<div class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 z-10" id="reference-container">
+<div class="reference-line ref-h"></div>
+<div class="reference-line ref-v"></div>
+<div class="ref-circle" style="width: 200px; height: 200px;"></div>
+<div class="ref-circle" style="width: 400px; height: 400px;"></div>
+</div>
+<canvas class="block w-full h-full cursor-crosshair z-0" id="game-canvas"></canvas>
+<div class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm transition-opacity duration-500" id="start-screen">
+<div class="bg-slate-800 border border-slate-600 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center">
+<div class="mb-6">
+<i class="fa-regular fa-circle-dot text-6xl text-emerald-400 mb-4"></i>
+<h2 class="text-3xl font-bold text-white mb-2">准备好了吗？</h2>
+<p class="text-slate-400 text-lg">用鼠标绘制尽可能完美的圆，系统将根据圆度评分</p>
+</div>
+<button class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg transform active:scale-95 flex items-center justify-center gap-2" id="start-btn">
+<span>开始挑战</span>
+<i class="fa-solid fa-arrow-right"></i>
+</button>
+</div>
+</div>
+<div class="hidden absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm" id="result-screen">
+<div class="bg-slate-800 border border-slate-600 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-cyan-400"></div>
+<div class="mb-2">
+<span class="text-slate-400 text-sm uppercase tracking-widest">得分</span>
+</div>
+<div class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-emerald-300 to-cyan-300 mb-4 drop-shadow-sm" id="score-display">
+                0
+            </div>
+<div class="w-full h-px bg-slate-700 my-4"></div>
+<p class="text-xl font-medium text-white mb-8 min-h-[3rem] flex items-center justify-center" id="comment-display">
+</p>
+<div class="flex gap-4">
+<button class="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 border border-slate-600 flex items-center justify-center gap-2" id="retry-btn">
+<i class="fa-solid fa-rotate-right"></i>
+<span>再试一次</span>
+</button>
+<button class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-colors duration-200 shadow-lg flex items-center justify-center gap-2" id="share-btn">
+<i class="fa-solid fa-share-nodes"></i>
+<span>炫耀一下</span>
+</button>
+</div>
+</div>
+</div>
+<footer class="absolute bottom-4 left-0 w-full text-center pointer-events-none z-10">
+<p class="text-xs text-slate-500">© 2026 24级动画二班团支部 | 极简画圆测试</p>
+</footer>
+<script>
+        /**
+         * Game Logic
+         */
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const startScreen = document.getElementById('start-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const commentDisplay = document.getElementById('comment-display');
+        const startBtn = document.getElementById('start-btn');
+        const retryBtn = document.getElementById('retry-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const refToggle = document.getElementById('ref-toggle');
+        const refContainer = document.getElementById('reference-container');
+
+        // State
+        let isDrawing = false;
+        let points = [];
+        let isGameActive = false;
+        let animationId = null;
+
+        // Configuration
+        const STROKE_COLOR = '#e2e8f0'; // Slate 200
+        const STROKE_WIDTH = 4;
+        const MIN_POINTS = 20; // Minimum points to consider a valid shape
+
+        // Resize Canvas
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Re-apply context styles after resize
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = STROKE_COLOR;
+            ctx.lineWidth = STROKE_WIDTH;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Toggle Reference Lines
+        refToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                refContainer.classList.remove('opacity-0');
+            } else {
+                refContainer.classList.add('opacity-0');
+            }
+        });
+
+        // Start Game
+        startBtn.addEventListener('click', () => {
+            startScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                startScreen.classList.add('hidden');
+                isGameActive = true;
+            }, 500);
+        });
+
+        // Reset Game
+        function resetGame() {
+            resultScreen.classList.add('hidden');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            points = [];
+            isGameActive = true;
+        }
+
+        retryBtn.addEventListener('click', resetGame);
+
+        // Share Button (Mock functionality with visual feedback)
+        shareBtn.addEventListener('click', () => {
+            const originalText = shareBtn.innerHTML;
+            shareBtn.innerHTML = '<i class="fa-solid fa-check"></i> <span>已复制</span>';
+            shareBtn.classList.replace('bg-emerald-500', 'bg-slate-600');
+            
+            // Simulate copy to clipboard
+            const textToCopy = `我在"24级动画二班团支部画圈挑战"中得了 ${scoreDisplay.innerText} 分！${commentDisplay.innerText}`;
+            navigator.clipboard.writeText(textToCopy).catch(() => {});
+
+            setTimeout(() => {
+                shareBtn.innerHTML = originalText;
+                shareBtn.classList.replace('bg-slate-600', 'bg-emerald-500');
+            }, 2000);
+        });
+
+        // Drawing Event Handlers
+        function startDrawing(e) {
+            if (!isGameActive) return;
+            isDrawing = true;
+            points = [];
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous attempt
+            
+            const { x, y } = getPos(e);
+            points.push({ x, y });
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing || !isGameActive) return;
+            const { x, y } = getPos(e);
+            points.push({ x, y });
+            
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function stopDrawing() {
+            if (!isDrawing || !isGameActive) return;
+            isDrawing = false;
+            ctx.closePath();
+            
+            if (points.length > MIN_POINTS) {
+                evaluateScore();
+            } else {
+                // If too few points, just ignore or give 0
+                showResult(0, "画得太快了，再试一次吧");
+            }
+        }
+
+        function getPos(e) {
+            // Handle both mouse and touch
+            if (e.touches && e.touches.length > 0) {
+                return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        // Attach Events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); }, { passive: false });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); }, { passive: false });
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); stopDrawing(); });
+
+        /**
+         * Scoring Algorithm
+         * Calculates the deviation of the drawn path from a perfect circle.
+         */
+        function evaluateScore() {
+            // 1. Calculate Centroid (Geometric Center)
+            let sumX = 0, sumY = 0;
+            for (let p of points) {
+                sumX += p.x;
+                sumY += p.y;
+            }
+            const centerX = sumX / points.length;
+            const centerY = sumY / points.length;
+
+            // 2. Calculate Radius for each point
+            let sumRadius = 0;
+            const radii = points.map(p => {
+                const r = Math.sqrt(Math.pow(p.x - centerX, 2) + Math.pow(p.y - centerY, 2));
+                sumRadius += r;
+                return r;
+            });
+
+            const avgRadius = sumRadius / points.length;
+
+            // 3. Calculate Deviation (Standard Deviation)
+            let sumSquaredDiff = 0;
+            for (let r of radii) {
+                sumSquaredDiff += Math.pow(r - avgRadius, 2);
+            }
+            const variance = sumSquaredDiff / points.length;
+            const stdDev = Math.sqrt(variance);
+
+            // 4. Calculate Score
+            // A perfect circle has 0 deviation. 
+            // We normalize deviation relative to the average radius.
+            // If deviation is > 20% of radius, score drops significantly.
+            
+            const relativeError = stdDev / avgRadius;
+            
+            // Heuristic formula for score (0-100)
+            // 0 error -> 100 score
+            // 0.3 error -> 0 score
+            let score = Math.max(0, 100 - (relativeError * 350)); 
+            
+            // Boost score slightly if it's very good to make 100 achievable
+            if (score > 95) score = 100;
+            else score = Math.round(score);
+
+            // 5. Determine Comment
+            let comment = "";
+            if (score <= 30) {
+                comment = "这圆是量子态的？";
+            } else if (score <= 60) {
+                comment = "还需努力，继续练习";
+            } else if (score <= 90) {
+                comment = "画得不错，接近完美";
+            } else {
+                comment = "圆规成精了！";
+                triggerConfetti();
+            }
+
+            showResult(score, comment);
+        }
+
+        function showResult(score, comment) {
+            isGameActive = false;
+            scoreDisplay.innerText = score;
+            commentDisplay.innerText = comment;
+            
+            resultScreen.classList.remove('hidden');
+            // Simple animation for result appearance
+            resultScreen.animate([
+                { opacity: 0, transform: 'scale(0.95)' },
+                { opacity: 1, transform: 'scale(1)' }
+            ], {
+                duration: 300,
+                easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
+            });
+        }
+
+        function triggerConfetti() {
+            const duration = 3000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#34d399', '#22d3ee', '#ffffff']
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#34d399', '#22d3ee', '#ffffff']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+    </script>
+</body>
+</html>
